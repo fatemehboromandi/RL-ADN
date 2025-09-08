@@ -6,6 +6,11 @@ import numpy as np
 import pandapower as pp
 import pandas as pd
 from gym import spaces
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from rl_adn.data_manager.data_manager import GeneralPowerDataManager
 from rl_adn.environments.battery import Battery, battery_parameters
@@ -81,7 +86,7 @@ class PowerNetEnv(gym.Env):
         self.network_info = config['network_info']
         # network_info for building the network
         if self.network_info == 'None':
-            print('create basic 34 node IEEE network, when initial data is not identified')
+            logger.info('create basic 34 node IEEE network, when initial data is not identified')
             self.network_info = {'vm_pu': 1.0, 's_base': 1000,
                                  'bus_info_file': '../data_sources/network_data/node_34/Nodes_34.csv',
                                  'branch_info_file': '../data_sources/network_data/node_34/Lines_34.csv'}
@@ -117,8 +122,8 @@ class PowerNetEnv(gym.Env):
 
         if self.state_pattern == 'default':
             self.state_length = len(self.battery_list) * 2 + self.node_num + 2
-            print(self.data_manager.active_power_min)
-            print(self.data_manager.price_min)
+            logger.debug(self.data_manager.active_power_min)
+            logger.debug(self.data_manager.price_min)
             self.state_min = np.array([self.data_manager.active_power_min, 0.2, self.data_manager.price_min, 0.0, 0.5])
             self.state_max = np.array(
                 [self.data_manager.active_power_max, 0.8, self.data_manager.price_max, self.episode_length - 1, 1.5])
@@ -469,7 +474,8 @@ class PowerNetEnv(gym.Env):
         :param finish: Whether the episode has ended.
         :type finish: bool
         """
-        print('state={}, next_state={}, reward={:.4f}, terminal={}\n'.format(current_obs, next_obs, reward, finish))
+        logger.debug('state=%s, next_state=%s, reward=%.4f, terminal=%s',
+                     current_obs, next_obs, reward, finish)
 
 
 if __name__ == '__main__':
@@ -482,13 +488,11 @@ if __name__ == '__main__':
             # 1 is charge -1 is discharge
             tem_action = np.ones(len(power_net_env.battery_list))
             # tem_action = power_net_env.action_space.sample()
-            print('year, month, day, current time',
-                  (power_net_env.year, power_net_env.month, power_net_env.day, power_net_env.current_time))
-            # print(f'current month is {power_net_env.month}, current day is {power_net_env.day}, current time is {power_net_env.current_time}')
+            logger.info('year, month, day, current time %s',
+                        (power_net_env.year, power_net_env.month,
+                         power_net_env.day, power_net_env.current_time))
             next_obs, reward, finish, info = power_net_env.step(tem_action)
-            # print(power_net_env.reward_for_power)
-            print(power_net_env.reward_for_penalty)
-            # print('reward',reward)
+            logger.info('%s', power_net_env.reward_for_penalty)
             episode_reward += reward
             # power_net_env.render(current_obs, next_obs, reward, finish)
-        print(episode_reward)
+        logger.info('%s', episode_reward)
